@@ -1,0 +1,40 @@
+﻿; ascii.c 反汇编（gcc -O2，32位）
+; 打印 a~z，每行13个，共2行
+
+00403b60 <_main>:
+  403b60: push   ebp                ; 保存ebp
+  403b61: mov    ebp,esp            ; ebp=esp
+  403b63: push   ebx                ; 保存ebx
+  403b64: mov    ebx,0x61           ; 当前字符='a'
+  403b69: and    esp,0xfffffff0     ; 栈对齐16字节
+  403b6c: sub    esp,0x10           ; 开局部空间
+  403b6f: call   401990 <___main>   ; 初始化
+
+; 第一行 a~m
+  403b74: mov    DWORD PTR [esp+0x4],ebx   ; 参数2：当前字符
+  403b78: mov    DWORD PTR [esp],0x405064  ; 参数1："%c "
+  403b7f: add    ebx,0x1                    ; 字符加1
+  403b82: call   403a38 <_printf>           ; 调printf
+  403b87: cmp    ebx,0x6e                   ; 到'n'了没
+  403b8a: jne    403b74                     ; 没到就继续
+  403b8c: mov    DWORD PTR [esp],0xa        ; 换行符
+  403b93: call   403a30 <_putchar>          ; 换行
+
+; 第二行 n~z
+  403b98: mov    eax,0x6e                   ; eax='n'
+  403b9d: lea    esi,[esi+0x0]              ; 填充
+  403ba0: lea    ebx,[eax+0x1]              ; ebx=eax+1
+  403ba3: mov    DWORD PTR [esp+0x4],eax    ; 参数2：当前字符
+  403ba7: mov    DWORD PTR [esp],0x405064   ; 参数1："%c "
+  403bae: call   403a38 <_printf>           ; 调printf
+  403bb3: movsx  eax,bl                     ; eax=下一个字符
+  403bb6: cmp    al,0x7b                    ; 超过'z'了没
+  403bb8: jne    403ba0                     ; 没到就继续
+  403bba: mov    DWORD PTR [esp],0xa
+  403bc1: call   403a30 <_putchar>          ; 换行
+
+; 返回
+  403bc6: xor    eax,eax                    ; 返回值0
+  403bc8: mov    ebx,DWORD PTR [ebp-0x4]    ; 恢复ebx
+  403bcb: leave                             ; 恢复栈
+  403bcc: ret
