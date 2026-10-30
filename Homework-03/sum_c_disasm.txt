@@ -1,0 +1,47 @@
+﻿; sum.c 反汇编（gcc，32位）
+; 功能：求 1+2+...+100，打印 5050
+; 源码见 sum.c
+
+; ============ -O0（不开优化，保留循环） ============
+00401460 <_main>:
+  401460: push   ebp                    ; 保存栈底
+  401461: mov    ebp,esp                ; 栈帧
+  401463: and    esp,0xfffffff0         ; 栈对齐
+  401466: sub    esp,0x20               ; 开局部空间
+  401469: call   4019e0 <___main>       ; 运行时初始化
+  40146e: mov    DWORD PTR [esp+0x18],0x0   ; sum = 0
+  401476: mov    DWORD PTR [esp+0x1c],0x1   ; i = 1
+  40147e: jmp    40148d                 ; 先跳去判断条件
+; 循环体
+  401480: mov    eax,DWORD PTR [esp+0x1c]   ; eax = i
+  401484: add    DWORD PTR [esp+0x18],eax   ; sum += i
+  401488: add    DWORD PTR [esp+0x1c],0x1   ; i++
+; 条件判断
+  40148d: cmp    DWORD PTR [esp+0x1c],0x64  ; i 和 100 比
+  401492: jle    401480                 ; i<=100 就继续循环
+; 打印
+  401494: mov    eax,DWORD PTR [esp+0x18]   ; eax = sum
+  401498: mov    DWORD PTR [esp+0x4],eax    ; 参数2 = sum
+  40149c: mov    DWORD PTR [esp],0x405064   ; 参数1 = "%d\n"
+  4014a3: call   403a80 <_printf>       ; printf("%d\n", sum)
+; 返回
+  4014a8: mov    eax,0x0                ; 返回值 0
+  4014ad: leave                         ; 恢复栈
+  4014ae: ret
+
+; ============ -O2（开优化，编译器直接算好结果） ============
+00403b50 <_main>:
+  403b50: push   ebp
+  403b51: mov    ebp,esp
+  403b53: and    esp,0xfffffff0
+  403b56: sub    esp,0x10
+  403b59: call   401990 <___main>
+  403b5e: mov    DWORD PTR [esp+0x4],0x13ba   ; 直接放 0x13BA = 5050
+  403b66: mov    DWORD PTR [esp],0x405064     ; "%d\n"
+  403b6d: call   403a30 <_printf>
+  403b72: xor    eax,eax                ; 返回 0
+  403b74: leave
+  403b75: ret
+
+; 说明：-O2 下编译器发现 1+2+...+100 是常数，编译期就
+; 算出了 5050(0x13BA)，所以根本没有循环，直接 printf(5050)。
