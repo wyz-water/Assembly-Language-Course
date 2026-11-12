@@ -1,0 +1,106 @@
+﻿; 九九乘法表纠错 的 C 版反汇编（gcc -O2，32位）
+; 源码: check.c (table 全局) 和 check_local.c (table 局部)
+; 两版输出都一样: (2,3):7->6  (4,5):7->20  (6,6):7->36  (8,8):7->64
+
+; ============ 1) table 定义成全局数组 (check.c) ============
+; 全局数组放在 .data 段, 地址固定, main 直接用绝对地址访问,
+; 程序里没有"造表"的过程。
+00403b50 <_main>:
+  403b50: push   ebp
+  403b51: mov    ebp,esp
+  403b53: push   edi
+  403b54: push   esi
+  403b55: push   ebx
+  403b56: xor    edi,edi                ; edi = i, 从 0 开始
+  403b58: and    esp,0xfffffff0
+  403b5b: sub    esp,0x30
+  403b5e: call   401990 <___main>
+; 外层循环体
+  403b63: add    edi,0x1                ; i = i+1 (这里 i 已经是 1..9)
+  403b66: xor    ebx,ebx                ; ebx = j, 从 0 开始
+  403b68: lea    edx,[edi+edi*8-0x9]    ; edx = i*9-9 = 本行在表里的偏移
+  403b6c: mov    esi,edi                ; esi = i = 正确值基数
+; 内层循环体
+  403b70: add    ebx,0x1                ; j = j+1 (1..9)
+  403b73: movsx  eax,BYTE PTR [edx+ebx*1+0x40401f]  ; 直接取全局表 table[i][j]
+  403b7b: cmp    esi,eax                ; 正确值 和 表值 比
+  403b7d: je     403ba3                 ; 一样就跳过
+  403b7f: mov    DWORD PTR [esp+0x10],esi   ; printf 参数5 = 正确值
+  403b83: mov    DWORD PTR [esp+0xc],eax    ; 参数4 = 表里的错值
+  403b87: mov    DWORD PTR [esp+0x8],ebx    ; 参数3 = j
+  403b8b: mov    DWORD PTR [esp+0x4],edi    ; 参数2 = i
+  403b8f: mov    DWORD PTR [esp],0x405064   ; 参数1 = "(%d,%d):%d->%d\n"
+  403b96: mov    DWORD PTR [esp+0x2c],edx   ; 把行偏移存一下, 防 printf 破坏
+  403b9a: call   403a30 <_printf>
+  403b9f: mov    edx,DWORD PTR [esp+0x2c]   ; 取回行偏移
+  403ba3: add    esi,edi                ; 正确值 += i (i*(j+1) = i*j + i)
+  403ba5: cmp    ebx,0x9                ; j 到 9 了吗
+  403ba8: jne    403b70                 ; 没有就继续内层
+  403baa: cmp    edi,0x9                ; i 到 9 了吗
+  403bad: jne    403b63                 ; 没有就继续外层
+; 返回
+  403baf: lea    esp,[ebp-0xc]
+  403bb2: xor    eax,eax                ; 返回 0
+  403bb4: pop    ebx
+  403bb5: pop    esi
+  403bb6: pop    edi
+  403bb7: pop    ebp
+  403bb8: ret
+
+; ============ 2) table 定义成 main 里的局部数组 (check_local.c) ============
+; 局部数组在栈上分配, 而且启动时要把初始值从 .data 段
+; "抄"到栈上, 所以开头多了一段 rep movs 拷贝, 栈空间也多要 0x90 字节。
+00403b50 <_main>:
+  403b50: push   ebp
+  403b51: mov    ebp,esp
+  403b53: push   edi
+  403b54: push   esi
+  403b55: push   ebx
+  403b56: mov    esi,0x404021           ; 源 = .data 里的常量表
+  403b5b: and    esp,0xfffffff0
+  403b5e: sub    esp,0x90               ; 栈上开出 144 字节(含 81 字节的 table)
+  403b64: call   401990 <___main>
+; 把 .data 里的 81 字节初始值拷到栈上的局部 table
+  403b69: mov    eax,ds:0x404020
+  403b6e: lea    edx,[esp+0x3f]         ; edx = 栈上 table 起始(前一字节)
+  403b72: lea    edi,[esp+0x40]         ; edi = 栈上 table 起始
+  403b76: mov    ecx,0x14               ; 先拷 20 个双字(80字节)
+  403b7b: mov    DWORD PTR [esp+0x3f],eax
+  403b7f: mov    eax,ds:0x40406d
+  403b84: mov    DWORD PTR [esp+0x8c],eax   ; 单独补最后 1 字节
+  403b8b: rep movs DWORD PTR es:[edi],DWORD PTR ds:[esi]  ; 批量拷贝
+  403b8d: xor    edi,edi                ; edi = i = 0
+; 下面的双循环和全局版一样, 只是 table 用 [edx+ebx-1] 这种
+; 相对 edx(栈地址) 的变址方式访问
+  403b90: add    edi,0x1
+  403b93: xor    ebx,ebx
+  403b95: mov    esi,edi
+  403ba0: add    ebx,0x1
+  403ba3: movsx  eax,BYTE PTR [edx+ebx*1-0x1]  ; 取栈上的 table[i][j]
+  403ba8: cmp    esi,eax
+  403baa: je     403bd0
+  403bac: mov    DWORD PTR [esp+0x10],esi
+  403bb0: mov    DWORD PTR [esp+0xc],eax
+  403bb4: mov    DWORD PTR [esp+0x8],ebx
+  403bb8: mov    DWORD PTR [esp+0x4],edi
+  403bbc: mov    DWORD PTR [esp],0x405064
+  403bc3: mov    DWORD PTR [esp+0x2c],edx
+  403bc7: call   403a30 <_printf>
+  403bcc: mov    edx,DWORD PTR [esp+0x2c]
+  403bd0: add    esi,edi
+  403bd2: cmp    ebx,0x9
+  403bd5: jne    403ba0
+  403bd7: add    edx,0x9
+  403bda: cmp    edi,0x9
+  403bdd: jne    403b90
+  403bdf: lea    esp,[ebp-0xc]
+  403be2: xor    eax,eax
+  403be4: pop    ebx
+  403be5: pop    esi
+  403be6: pop    edi
+  403be7: pop    ebp
+  403be8: ret
+
+; 总结: 全局表 = 数据在 .data 段固定地址, 程序直接用绝对地址访问;
+; 局部表 = 数据放在栈上, 程序启动时先从 .data 把初始值拷进栈,
+; 之后用相对栈指针的变址访问, 栈开销也更大。
