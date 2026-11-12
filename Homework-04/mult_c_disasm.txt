@@ -1,0 +1,82 @@
+﻿; mult.c 反汇编（gcc，32位）
+; 功能：打印 9x9 乘法表，两重循环
+; 源码见 mult.c
+
+; ============ -O0（不开优化，原样翻译两重循环） ============
+00401460 <_main>:
+  401460: push   ebp                    ; 保存栈底
+  401461: mov    ebp,esp                ; 栈帧
+  401463: and    esp,0xfffffff0         ; 栈对齐
+  401466: sub    esp,0x20               ; 开局部空间
+  401469: call   401a10 <___main>       ; 运行时初始化
+  40146e: mov    DWORD PTR [esp+0x1c],0x9   ; a = 9
+  401476: jmp    4014c8                 ; 跳去判断外层条件
+; 外层循环体开始
+  401478: mov    DWORD PTR [esp+0x18],0x9   ; b = 9
+  401480: jmp    4014b0                 ; 跳去判断内层条件
+; 内层循环体
+  401482: mov    eax,DWORD PTR [esp+0x1c]   ; eax = a
+  401486: imul   eax,DWORD PTR [esp+0x18]   ; eax = a*b
+  40148b: mov    DWORD PTR [esp+0xc],eax    ; 第4个参数 = a*b
+  40148f: mov    eax,DWORD PTR [esp+0x18]   ; eax = b
+  401493: mov    DWORD PTR [esp+0x8],eax    ; 第3个参数 = b
+  401497: mov    eax,DWORD PTR [esp+0x1c]   ; eax = a
+  40149b: mov    DWORD PTR [esp+0x4],eax    ; 第2个参数 = a
+  40149f: mov    DWORD PTR [esp],0x405064   ; 第1个参数 = "%d*%d=%d "
+  4014a6: call   403ab8 <_printf>       ; printf("%d*%d=%d ", a, b, a*b)
+; 内层循环收尾
+  4014ab: sub    DWORD PTR [esp+0x18],0x1   ; b--
+  4014b0: cmp    DWORD PTR [esp+0x18],0x0   ; b 和 0 比
+  4014b5: jg     401482                 ; b>0 就继续内层循环
+; 一行打完，换行
+  4014b7: mov    DWORD PTR [esp],0xa    ; putchar 参数 = 10
+  4014be: call   403ab0 <_putchar>      ; 换行
+; 外层循环收尾
+  4014c3: sub    DWORD PTR [esp+0x1c],0x1   ; a--
+  4014c8: cmp    DWORD PTR [esp+0x1c],0x0   ; a 和 0 比
+  4014cd: jg     401478                 ; a>0 就继续外层循环
+; 返回
+  4014cf: mov    eax,0x0                ; 返回值 0
+  4014d4: leave
+  4014d5: ret
+
+; ============ -O2（开优化，用寄存器，乘法换成减法） ============
+00403b60 <_main>:
+  403b60: push   ebp
+  403b61: mov    ebp,esp
+  403b63: push   edi                    ; 保存 edi（放 a）
+  403b64: push   esi                    ; 保存 esi（放积 a*b）
+  403b65: push   ebx                    ; 保存 ebx（放 b）
+  403b66: mov    edi,0x9                ; a = 9
+  403b6b: and    esp,0xfffffff0
+  403b6e: sub    esp,0x10
+  403b71: call   401990 <___main>
+; 外层循环体开始
+  403b80: lea    esi,[edi+edi*8]        ; esi = edi*9 = a*9（算一次乘法）
+  403b83: mov    ebx,0x9                ; b = 9
+; 内层循环体
+  403b90: mov    DWORD PTR [esp+0xc],esi    ; 第4参数 = a*b
+  403b94: mov    DWORD PTR [esp+0x8],ebx    ; 第3参数 = b
+  403b98: sub    esi,edi                ; 积减掉一个 a，得到 a*(b-1)
+  403b9a: mov    DWORD PTR [esp+0x4],edi    ; 第2参数 = a
+  403b9e: mov    DWORD PTR [esp],0x405064   ; 第1参数 = "%d*%d=%d "
+  403ba5: call   403a38 <_printf>
+  403baa: sub    ebx,0x1                ; b--
+  403bad: jne    403b90                 ; b 不为 0 就继续内层
+; 一行打完，换行
+  403baf: mov    DWORD PTR [esp],0xa
+  403bb6: call   403a30 <_putchar>
+  403bbb: sub    edi,0x1                ; a--
+  403bbe: jne    403b80                 ; a 不为 0 就继续外层
+; 返回
+  403bc0: lea    esp,[ebp-0xc]
+  403bc3: xor    eax,eax                ; 返回值 0
+  403bc5: pop    ebx                    ; 恢复
+  403bc6: pop    esi
+  403bc7: pop    edi
+  403bc8: pop    ebp
+  403bc9: ret
+
+; 说明：-O2 下 a 和 b 都放寄存器（edi/ebx），乘法 a*b
+; 被优化成"减法"：先算 a*9，每循环一次减一个 a，就不用
+; 每次执行 imul 了。两重循环都只用 dec + jnz 一类条件转移。
