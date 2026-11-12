@@ -1,0 +1,58 @@
+﻿; 斐波那契递归 的 C 版反汇编（gcc -O0，32位）
+; 源码: fib.c
+; 看递归: 每 call 一次 _fib 就会 push 返回地址 + push ebp,
+; 栈上多一层, 递归到最深处时栈空间达到最大, 返回时再逐层释放。
+
+00401460 <_fib>:
+  401460: push   ebp                ; 保存上一层的 ebp（新栈帧开始）
+  401461: mov    ebp,esp            ; ebp = 当前栈帧
+  401463: push   ebx                ; 保存 ebx（下面要用来存 F(n-1)）
+  401464: sub    esp,0x14           ; 留 20 字节局部空间
+; 递归出口: n <= 1
+  401467: cmp    DWORD PTR [ebp+0x8],0x1   ; n 和 1 比
+  40146b: jg     401472             ; n > 1 就继续递归
+  40146d: mov    eax,DWORD PTR [ebp+0x8]   ; F(0)=0, F(1)=1, 直接返回 n
+  401470: jmp    401492             ; 跳到函数末尾
+; 递归: F(n-1) + F(n-2)
+  401472: mov    eax,DWORD PTR [ebp+0x8]   ; eax = n
+  401475: sub    eax,0x1            ; n-1
+  401478: mov    DWORD PTR [esp],eax      ; 参数 n-1 压栈
+  40147b: call   401460 <_fib>      ; 调用 fib(n-1)，栈上多一层帧
+  401480: mov    ebx,eax            ; ebx = F(n-1) 先存好
+  401482: mov    eax,DWORD PTR [ebp+0x8]   ; eax = n
+  401485: sub    eax,0x2            ; n-2
+  401488: mov    DWORD PTR [esp],eax      ; 参数 n-2 压栈
+  40148b: call   401460 <_fib>      ; 调用 fib(n-2)
+  401490: add    eax,ebx            ; eax = F(n-2) + F(n-1)
+; 函数末尾: 释放栈帧并返回
+  401492: add    esp,0x14           ; 撤销局部空间
+  401495: pop    ebx                ; 恢复 ebx
+  401496: pop    ebp                ; 恢复上层 ebp
+  401497: ret                       ; 返回，栈上这一层全部释放
+
+00401498 <_main>:
+  401498: push   ebp
+  401499: mov    ebp,esp
+  40149b: and    esp,0xfffffff0
+  40149e: sub    esp,0x20           ; 留 32 字节局部空间
+  4014a1: call   401a10 <___main>
+; scanf("%d", &n)
+  4014a6: lea    eax,[esp+0x1c]     ; eax = &n
+  4014aa: mov    DWORD PTR [esp+0x4],eax   ; 参数2 = &n
+  4014ae: mov    DWORD PTR [esp],0x405064 ; 参数1 = "%d"
+  4014b5: call   403aa8 <_scanf>
+; printf("%d\n", fib(n))
+  4014ba: mov    eax,DWORD PTR [esp+0x1c]  ; eax = n
+  4014be: mov    DWORD PTR [esp],eax       ; 参数 = n
+  4014c1: call   401460 <_fib>             ; F(n)
+  4014c6: mov    DWORD PTR [esp+0x4],eax   ; 参数2 = F(n)
+  4014ca: mov    DWORD PTR [esp],0x405067  ; 参数1 = "%d\n"
+  4014d1: call   403ab8 <_printf>
+  4014d6: mov    eax,0x0            ; 返回 0
+  4014db: leave
+  4014dc: ret
+
+; 栈空间观察: fib 每递归一层, 栈上固定增加约 28 字节
+; (返回地址 4 + ebp 4 + ebx 4 + 局部 20 + 传参 4...),
+; 所以栈峰值大致正比于 n。单步跟踪时在 call/ret 前后看 SP,
+; 会发现 SP 每次 call 都减小、每次 ret 都恢复。
