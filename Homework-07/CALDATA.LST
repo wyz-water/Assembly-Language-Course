@@ -1,0 +1,111 @@
+Microsoft (R) Macro Assembler Version 5.00                  11/23/26 13:28:51
+                                                             Page     1-1
+
+
+       1				; =====================================
+					======================= 
+       2				; caldata.asm : Êý¾Ý¶Î(È«¾Ö±äÁ¿/±í) + Õ
+					»¶Î 
+       3				; Ä£¿é 1/3, ¹© calmain / calproc Í¨¹ý E
+					XTRN ÒýÓÃ 
+       4				; =====================================
+					======================= 
+       5 0000				dseg segment public 'DATA' 
+       6				    public year, month, days, weekday 
+       7				    public prompt_y, prompt_m, month_na
+					mes, day_names, mdays, ttab 
+       8 0000  0000			    year   dw 0 
+       9 0002  00			    month  db 0 
+      10 0003  00			    days   db 0 
+      11 0004  00			    weekday db 0 
+      12 0005  79 65 61 72 28 31 39	    prompt_y db 'year(1900-2099):$' 
+      13       30 30 2D 32 30 39 39	
+      14       29 3A 24			
+      15 0016  6D 6F 6E 74 68 28 31	    prompt_m db 'month(1-12):$' 
+      16       2D 31 32 29 3A 24	
+      17 0023  4A 61 6E 75 61 72 79	    month_names db 'January  $','Februa
+					ry $','March    $','April    $' 
+      18       20 20 24 46 65 62 72	
+      19       75 61 72 79 20 24 4D	
+      20       61 72 63 68 20 20 20	
+      21       20 24 41 70 72 69 6C	
+      22       20 20 20 20 24		
+      23 004B  4D 61 79 20 20 20 20	                db 'May      $','June  
+					   $','July     $','August   $' 
+      24       20 20 24 4A 75 6E 65	
+      25       20 20 20 20 20 24 4A	
+      26       75 6C 79 20 20 20 20	
+      27       20 24 41 75 67 75 73	
+      28       74 20 20 20 24		
+      29 0073  53 65 70 74 65 6D 62	                db 'September$','Octobe
+					r  $','November $','December $' 
+      30       65 72 24 4F 63 74 6F	
+      31       62 65 72 20 20 24 4E	
+      32       6F 76 65 6D 62 65 72	
+      33       20 24 44 65 63 65 6D	
+      34       62 65 72 20 24		
+      35 009B  53 75 20 4D 6F 20 54	    day_names db 'Su Mo Tu We Th Fr Sa'
+					,0dh,0ah,'$' 
+      36       75 20 57 65 20 54 68	
+      37       20 46 72 20 53 61 0D	
+      38       0A 24			
+      39 00B2  1F 1C 1F 1E 1F 1E 1F	    mdays db 31,28,31,30,31,30,31,31,30
+					,31,30,31 
+      40       1F 1E 1F 1E 1F		
+      41 00BE  00 03 02 05 00 03 05	    ttab  db 0,3,2,5,0,3,5,1,4,6,2,4 
+      42       01 04 06 02 04		
+      43 00CA				dseg ends 
+      44				 
+Microsoft (R) Macro Assembler Version 5.00                  11/23/26 13:28:51
+                                                             Page     1-2
+
+
+      45 0000				sseg segment stack 
+      46 0000  0400[			    db 400h dup(?) 
+      47	    ??			
+      48			 ]	
+      49				
+      50 0400				sseg ends 
+      51				end 
+Microsoft (R) Macro Assembler Version 5.00                  11/23/26 13:28:51
+                                                             Symbols-1
+
+
+Segments and Groups:
+
+                N a m e         	Length	 Align	Combine Class
+
+DSEG . . . . . . . . . . . . . .  	00CA	PARA	PUBLIC	'DATA'
+SSEG . . . . . . . . . . . . . .  	0400	PARA	STACK	
+
+Symbols:            
+
+                N a m e         	Type	 Value	 Attr
+
+DAYS . . . . . . . . . . . . . .  	L BYTE	0003	DSEG	Global
+DAY_NAMES  . . . . . . . . . . .  	L BYTE	009B	DSEG	Global
+
+MDAYS  . . . . . . . . . . . . .  	L BYTE	00B2	DSEG	Global
+MONTH  . . . . . . . . . . . . .  	L BYTE	0002	DSEG	Global
+MONTH_NAMES  . . . . . . . . . .  	L BYTE	0023	DSEG	Global
+
+PROMPT_M . . . . . . . . . . . .  	L BYTE	0016	DSEG	Global
+PROMPT_Y . . . . . . . . . . . .  	L BYTE	0005	DSEG	Global
+
+TTAB . . . . . . . . . . . . . .  	L BYTE	00BE	DSEG	Global
+
+WEEKDAY  . . . . . . . . . . . .  	L BYTE	0004	DSEG	Global
+
+YEAR . . . . . . . . . . . . . .  	L WORD	0000	DSEG	Global
+
+@FILENAME  . . . . . . . . . . .  	TEXT  caldata		
+
+
+     25 Source  Lines
+     25 Total   Lines
+     15 Symbols
+
+  50680 + 465848 Bytes symbol space free
+
+      0 Warning Errors
+      0 Severe  Errors

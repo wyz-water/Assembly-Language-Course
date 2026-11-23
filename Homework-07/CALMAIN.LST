@@ -1,0 +1,168 @@
+Microsoft (R) Macro Assembler Version 5.00                  11/23/26 13:28:52
+                                                             Page     1-1
+
+
+       1				; =====================================
+					======================= 
+       2				; calmain.asm : Ö÷³ÌÐò + ÊäÈë (´úÂë¶Î C
+					SEG1) 
+       3				; Ä£¿é 2/3 
+       4				; ¶Î¼äµ÷ÓÃ: call far ptr Ìø½ø calproc µ
+					Ä CSEG2, 
+       5				; Ô¶µ÷ÓÃ»áÍ¬Ê±Ñ¹Èë CS ºÍ IP, ·µ»ØÓÃ ret
+					f Ò»Æð»Ö¸´¡£ 
+       6				; =====================================
+					======================= 
+       7				include cal.inc 
+       8			     C	; =====================================
+					======================= 
+       9			     C	; cal.inc : ºê»ã±à (Macro) ¶¨Òå, ¹©¸÷Ä£
+					¿é INCLUDE 
+      10			     C	; ºêºÍ¹ý³Ì(proc)µÄÇø±ð: 
+      11			     C	;   ºêÔÚ»ã±àÊ±Õ¹¿ª, Ã¿ÓÃÒ»´Î¾Í¸´ÖÆÒ»¶Î´
+					úÂë, Ã»ÓÐ call/ret ¿ªÏú; 
+      12			     C	;   ¹ý³ÌÔÚÁ´½ÓºóÖ»ÓÐÒ»·Ý´úÂë, µ÷ÓÃÓÐÑ¹Õ
+					»/·µ»Ø¿ªÏú¡£ 
+      13			     C	; Ð¡¹¦ÄÜ(Èç´òÓ¡Ò»¸ö×Ö·û)ÓÃºê¸üÖ±¹Û¡£ 
+      14			     C	; =====================================
+					======================= 
+      15			     C	 
+      16			     C	; ´òÓ¡Ò»¸ö×Ö·û, ²»ÆÆ»µµ÷ÓÃ´¦µÄ¼Ä´æÆ÷ 
+      17			     C	printc MACRO ch 
+      18			     C	    push dx 
+      19			     C	    mov dl,ch 
+      20			     C	    mov ah,2 
+      21			     C	    int 21h 
+      22			     C	    pop dx 
+      23			     C	ENDM 
+      24			     C	 
+      25			     C	; Êä³ö»Ø³µ»»ÐÐ 
+      26			     C	newline MACRO 
+      27			     C	    printc 0dh 
+      28			     C	    printc 0ah 
+      29			     C	ENDM 
+      30				 
+      31				 
+      32 0000				dseg segment public 'DATA' 
+      33				    extrn year:word, month:byte, days:b
+					yte, weekday:byte 
+      34				    extrn prompt_y:byte, prompt_m:byte 
+      35 0000				dseg ends 
+      36				 
+      37 0000				sseg segment stack 
+      38 0000				sseg ends 
+      39				 
+      40 0000				cseg1 segment public 'CODE' 
+      41				    assume cs:cseg1, ds:dseg, ss:sseg 
+      42				    extrn day_of_week:far, print_calend
+					ar:far 
+Microsoft (R) Macro Assembler Version 5.00                  11/23/26 13:28:52
+                                                             Page     1-2
+
+
+      43 0000				main proc far 
+      44 0000  B8 ---- R		    mov ax,dseg 
+      45 0003  8E D8			    mov ds,ax 
+      46				 
+      47 0005  B4 09			    mov ah,9 
+      48 0007  BA 0000 E		    mov dx,offset prompt_y 
+      49 000A  CD 21			    int 21h 
+      50 000C  E8 0039 R		    call read_number 
+      51 000F  A3 0000 E		    mov year,ax 
+      52				 
+      53 0012  B4 09			    mov ah,9 
+      54 0014  BA 0000 E		    mov dx,offset prompt_m 
+      55 0017  CD 21			    int 21h 
+      56 0019  E8 0039 R		    call read_number 
+      57 001C  A2 0000 E		    mov month,al 
+      58				 
+      59 001F  8B 1E 0000 E		    mov bx,year 
+      60 0023  8A 0E 0000 E		    mov cl,month 
+      61 0027  9A 0000 ---- E		    call far ptr day_of_week   ; Ô¶µ÷ÓÃ
+					(¿ç¶Î), »úÆ÷Âë 9A 
+      62 002C  A2 0000 E		    mov weekday,al 
+      63				 
+      64 002F  9A 0000 ---- E		    call far ptr print_calendar ; Ô¶µ÷Ó
+					Ã(¿ç¶Î), »úÆ÷Âë 9A 
+      65				 
+      66 0034  B8 4C00			    mov ax,4c00h 
+      67 0037  CD 21			    int 21h 
+      68 0039				main endp 
+      69				 
+      70 0039				read_number proc near 
+      71 0039  33 DB			    xor bx,bx 
+      72 003B				rn_loop: 
+      73 003B  B4 01			    mov ah,1 
+      74 003D  CD 21			    int 21h 
+      75 003F  3C 0D			    cmp al,0dh 
+      76 0041  74 17			    je rn_done 
+      77 0043  3C 0A			    cmp al,0ah 
+      78 0045  74 F4			    je rn_loop 
+      79 0047  2C 30			    sub al,'0' 
+      80 0049  32 E4			    xor ah,ah 
+      81 004B  8B C8			    mov cx,ax 
+      82 004D  8B C3			    mov ax,bx 
+      83 004F  BA 000A			    mov dx,10 
+      84 0052  F7 E2			    mul dx 
+      85 0054  03 C1			    add ax,cx 
+      86 0056  8B D8			    mov bx,ax 
+      87 0058  EB E1			    jmp rn_loop 
+      88 005A				rn_done: 
+      89 005A  8B C3			    mov ax,bx 
+      90 005C  C3			    ret 
+      91 005D				read_number endp 
+      92 005D				cseg1 ends 
+      93				end main 
+
+Microsoft (R) Macro Assembler Version 5.00                  11/23/26 13:28:52
+                                                             Symbols-1
+
+
+Macros:
+
+		N a m e			Lines
+
+NEWLINE  . . . . . . . . . . . .  	   2
+PRINTC . . . . . . . . . . . . .  	   5
+
+Segments and Groups:
+
+                N a m e         	Length	 Align	Combine Class
+
+CSEG1  . . . . . . . . . . . . .  	005D	PARA	PUBLIC	'CODE'
+DSEG . . . . . . . . . . . . . .  	0000	PARA	PUBLIC	'DATA'
+SSEG . . . . . . . . . . . . . .  	0000	PARA	STACK	
+
+Symbols:            
+
+                N a m e         	Type	 Value	 Attr
+
+DAYS . . . . . . . . . . . . . .  	V BYTE	0000	DSEG	External
+DAY_OF_WEEK  . . . . . . . . . .  	L FAR 	0000	CSEG1	External
+
+MAIN . . . . . . . . . . . . . .  	F PROC	0000	CSEG1	Length = 0039
+MONTH  . . . . . . . . . . . . .  	V BYTE	0000	DSEG	External
+
+PRINT_CALENDAR . . . . . . . . .  	L FAR 	0000	CSEG1	External
+PROMPT_M . . . . . . . . . . . .  	V BYTE	0000	DSEG	External
+PROMPT_Y . . . . . . . . . . . .  	V BYTE	0000	DSEG	External
+
+READ_NUMBER  . . . . . . . . . .  	N PROC	0039	CSEG1	Length = 0024
+RN_DONE  . . . . . . . . . . . .  	L NEAR	005A	CSEG1
+RN_LOOP  . . . . . . . . . . . .  	L NEAR	003B	CSEG1
+
+WEEKDAY  . . . . . . . . . . . .  	V BYTE	0000	DSEG	External
+
+YEAR . . . . . . . . . . . . . .  	V WORD	0000	DSEG	External
+
+@FILENAME  . . . . . . . . . . .  	TEXT  calmain		
+
+
+     92 Source  Lines
+     93 Total   Lines
+     21 Symbols
+
+  50604 + 449540 Bytes symbol space free
+
+      0 Warning Errors
+      0 Severe  Errors
