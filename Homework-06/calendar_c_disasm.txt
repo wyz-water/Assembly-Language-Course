@@ -1,0 +1,327 @@
+﻿; calendar.c 反汇编（gcc 6.3.0，32位 x86-windows）
+; 功能: 输入年(1900-2099)/月(1-12), 打印该月月历
+; 两段: -O0(不开优化, day_of_week/days_in_month 是独立函数)
+;        -O2(开优化, 两个函数被内联进 main)
+
+; ============ -O0: main (0x40158E..0x4016E8) ============
+0040158e <_main>:
+  40158e: push   ebp
+  40158f: mov    ebp,esp                ; 栈帧
+  401591: and    esp,0xfffffff0         ; 栈对齐
+  401594: sub    esp,0x30               ; 局部空间
+  401597: call   401c20 <___main>       ; 运行时初始化
+; printf("year(1900-2099):")
+  40159c: mov    DWORD PTR [esp],0x405080   ; 字符串地址
+  4015a3: call   403cd8 <_printf>
+; scanf("%d", &year)   year 在 [esp+0x1c]
+  4015a8: lea    eax,[esp+0x1c]         ; &year
+  4015ac: mov    DWORD PTR [esp+0x4],eax
+  4015b0: mov    DWORD PTR [esp],0x405091   ; "%d"
+  4015b7: call   403cb8 <_scanf>
+; printf("month(1-12):")
+  4015bc: mov    DWORD PTR [esp],0x405094
+  4015c3: call   403cd8 <_printf>
+; scanf("%d", &month)  month 在 [esp+0x18]
+  4015c8: lea    eax,[esp+0x18]         ; &month
+  4015cc: mov    DWORD PTR [esp+0x4],eax
+  4015d0: mov    DWORD PTR [esp],0x405091
+  4015d7: call   403cb8 <_scanf>
+; printf("   %s %d\n", names[month-1], year)
+  4015dc: mov    edx,DWORD PTR [esp+0x1c]    ; year
+  4015e0: mov    eax,DWORD PTR [esp+0x18]    ; month
+  4015e4: sub    eax,0x1                      ; month-1
+  4015e7: mov    eax,DWORD PTR [eax*4+0x404020]  ; names[month-1] 指针表
+  4015ee: mov    DWORD PTR [esp+0x8],edx   ; 参数3 = year
+  4015f2: mov    DWORD PTR [esp+0x4],eax   ; 参数2 = 月名
+  4015f6: mov    DWORD PTR [esp],0x4050a1  ; 参数1 = "   %s %d\n"
+  4015fd: call   403cd8 <_printf>
+; puts("Su Mo Tu We Th Fr Sa")
+  401602: mov    DWORD PTR [esp],0x4050ab
+  401609: call   403cc8 <_puts>
+; w = day_of_week(year, month)  -> [esp+0x24]
+  40160e: mov    edx,DWORD PTR [esp+0x18]    ; month
+  401612: mov    eax,DWORD PTR [esp+0x1c]    ; year
+  401616: mov    DWORD PTR [esp+0x4],edx     ; 参数2 = month
+  40161a: mov    DWORD PTR [esp],eax         ; 参数1 = year
+  40161d: call   4014fb <_day_of_week>
+  401622: mov    DWORD PTR [esp+0x24],eax    ; w
+; d = days_in_month(year, month) -> [esp+0x20]
+  401626: mov    edx,DWORD PTR [esp+0x18]
+  40162a: mov    eax,DWORD PTR [esp+0x1c]
+  40162e: mov    DWORD PTR [esp+0x4],edx
+  401632: mov    DWORD PTR [esp],eax
+  401635: call   4014c4 <_days_in_month>
+  40163a: mov    DWORD PTR [esp+0x20],eax    ; d
+; 前导空格: i=0; i<w*3; i++ 打空格
+  40163e: mov    DWORD PTR [esp+0x2c],0x0    ; i = 0
+  401646: jmp    401659
+  401648: mov    DWORD PTR [esp],0x20        ; ' '
+  40164f: call   403cd0 <_putchar>
+  401654: add    DWORD PTR [esp+0x2c],0x1    ; i++
+  401659: mov    edx,DWORD PTR [esp+0x24]    ; w
+  40165d: mov    eax,edx
+  40165f: add    eax,eax
+  401661: add    eax,edx                     ; w*3
+  401663: cmp    eax,DWORD PTR [esp+0x2c]    ; i < w*3 ?
+  401667: jg     401648
+; 主循环: day=1..d
+  401669: mov    DWORD PTR [esp+0x28],0x1    ; day = 1
+  401671: jmp    4016cc
+; 循环体
+  401673: mov    eax,DWORD PTR [esp+0x28]    ; day
+  401677: mov    DWORD PTR [esp+0x4],eax
+  40167b: mov    DWORD PTR [esp],0x4050c0    ; "%3d"
+  401682: call   403cd8 <_printf>            ; printf("%3d", day)
+; (w+day) % 7 == 0 ?  编译器把 mod 7 换成 乘魔数+移位
+  401687: mov    edx,DWORD PTR [esp+0x24]    ; w
+  40168b: mov    eax,DWORD PTR [esp+0x28]    ; day
+  40168f: lea    ecx,[edx+eax*1]             ; w+day
+  401692: mov    edx,0x92492493              ; 魔数
+  401697: mov    eax,ecx
+  401699: imul   edx
+  40169b: lea    eax,[edx+ecx*1]
+  40169e: sar    eax,0x2
+  4016a1: mov    edx,eax
+  4016a3: mov    eax,ecx
+  4016a5: sar    eax,0x1f
+  4016a8: sub    edx,eax
+  4016aa: mov    eax,edx                    ; 商 = (w+day)/7
+  4016ac: mov    edx,eax
+  4016ae: shl    edx,0x3
+  4016b1: sub    edx,eax                    ; 商*7
+  4016b3: mov    eax,ecx
+  4016b5: sub    eax,edx                    ; 余数
+  4016b7: test   eax,eax
+  4016b9: jne    4016c7                     ; 余数!=0 不换行
+  4016bb: mov    DWORD PTR [esp],0xa         ; '\n'
+  4016c2: call   403cd0 <_putchar>
+; 循环尾
+  4016c7: add    DWORD PTR [esp+0x28],0x1    ; day++
+  4016cc: mov    eax,DWORD PTR [esp+0x28]
+  4016d0: cmp    eax,DWORD PTR [esp+0x20]    ; day <= d ?
+  4016d4: jle    401673
+; 收尾换行, 返回 0
+  4016d6: mov    DWORD PTR [esp],0xa
+  4016dd: call   403cd0 <_putchar>
+  4016e2: mov    eax,0x0
+  4016e7: leave
+  4016e8: ret
+
+; ============ -O0: days_in_month (0x4014C4) ============
+; cdecl 参数: [ebp+8]=年, [ebp+0xc]=月
+  4014c4: push   ebp
+  4014c5: mov    ebp,esp
+  4014c7: sub    esp,0x14
+  4014ca: mov    eax,DWORD PTR [ebp+0xc]    ; 月
+  4014cd: sub    eax,0x1
+  4014d0: mov    eax,DWORD PTR [eax*4+0x4050e0] ; md[月-1] 查表
+  4014d7: mov    DWORD PTR [ebp-0x4],eax    ; d = 表值
+  4014da: cmp    DWORD PTR [ebp+0xc],0x2    ; 是 2 月?
+  4014de: jne    4014f6                     ; 不是就返回
+  4014e0: mov    eax,DWORD PTR [ebp+0x8]    ; 年
+  4014e3: mov    DWORD PTR [esp],eax
+  4014e6: call   401460 <_is_leap>          ; is_leap(年)
+  4014eb: test   eax,eax
+  4014ed: je     4014f6                     ; 平年不动
+  4014ef: mov    DWORD PTR [ebp-0x4],0x1d   ; 闰年 d=29
+  4014f6: mov    eax,DWORD PTR [ebp-0x4]
+  4014f9: leave
+  4014fa: ret
+
+; ============ -O0: day_of_week (0x4014FB) ============
+; 公式: m<3 时 y--, w=(y+y/4-y/100+y/400+t[m-1]+1)%7
+  4014fb: push   ebp
+  4014fc: mov    ebp,esp
+  4014fe: push   ebx
+  4014ff: cmp    DWORD PTR [ebp+0xc],0x2    ; m<3 ?
+  401503: jg     401509
+  401505: sub    DWORD PTR [ebp+0x8],0x1    ; y = y-1
+; y/4 (负数也能整除的写法: cdq; and edx,3; add; sar 2)
+  401509: mov    eax,DWORD PTR [ebp+0x8]
+  40150c: cdq
+  40150d: and    edx,0x3
+  401510: add    eax,edx
+  401512: sar    eax,0x2                    ; eax = y/4
+  401515: mov    edx,eax
+  401517: mov    eax,DWORD PTR [ebp+0x8]
+  40151a: lea    ebx,[edx+eax*1]            ; ebx = y + y/4
+; y/100: imul 魔数 0x51EB851F, sar 5
+  40151d: mov    ecx,DWORD PTR [ebp+0x8]
+  401520: mov    edx,0x51eb851f
+  401525: mov    eax,ecx
+  401527: imul   edx
+  401529: mov    eax,edx
+  40152b: sar    eax,0x5
+  40152e: sar    ecx,0x1f
+  401531: mov    edx,ecx
+  401533: sub    edx,eax
+  401535: mov    eax,edx                    ; eax = y/100
+  401537: add    ebx,eax                    ; - y/100
+; y/400: 同样魔数, sar 7
+  401539: mov    ecx,DWORD PTR [ebp+0x8]
+  40153c: mov    edx,0x51eb851f
+  401541: mov    eax,ecx
+  401543: imul   edx
+  401545: sar    edx,0x7
+  401548: mov    eax,ecx
+  40154a: sar    eax,0x1f
+  40154d: sub    edx,eax
+  40154f: mov    eax,edx                    ; eax = y/400
+  401551: lea    edx,[ebx+eax*1]            ; + y/400
+; + t[m-1] + 1
+  401554: mov    eax,DWORD PTR [ebp+0xc]    ; 月
+  401557: sub    eax,0x1
+  40155a: mov    eax,DWORD PTR [eax*4+0x405120] ; t[月-1]
+  401561: add    eax,edx
+  401563: lea    ecx,[eax+0x1]              ; +1
+; mod 7: 乘魔数 0x92492493 再反推余数
+  401566: mov    edx,0x92492493
+  40156b: mov    eax,ecx
+  40156d: imul   edx
+  40156f: lea    eax,[edx+ecx*1]
+  401572: sar    eax,0x2
+  401575: mov    edx,eax
+  401577: mov    eax,ecx
+  401579: sar    eax,0x1f
+  40157c: sub    edx,eax                    ; edx = 商
+  40157e: mov    eax,edx
+  401580: mov    edx,eax
+  401582: shl    edx,0x3
+  401585: sub    edx,eax                    ; 商*7
+  401587: mov    eax,ecx
+  401589: sub    eax,edx                    ; 余数 = 星期
+  40158b: pop    ebx
+  40158c: pop    ebp
+  40158d: ret
+
+; ============ -O2: main (0x403B70..0x403D0F) ============
+; 优化点: day_of_week 和 days_in_month 被直接内联进 main,
+; 年/月/星期/天数都放寄存器, 前面的除法用 idiv, mod 7 用魔数。
+  403b70: push   ebp
+  403b71: mov    ebp,esp
+  403b73: push   edi
+  403b74: push   esi
+  403b75: push   ebx
+  403b76: and    esp,0xfffffff0
+  403b79: sub    esp,0x30
+  403b7c: call   401990 <___main>
+  403b81: mov    DWORD PTR [esp],0x405080
+  403b88: call   403a48 <_printf>          ; printf("year(1900-2099):")
+  403b8d: lea    eax,[esp+0x28]
+  403b91: mov    DWORD PTR [esp],0x405091
+  403b98: mov    DWORD PTR [esp+0x4],eax
+  403b9c: call   403a28 <_scanf>           ; scanf("%d",&year) [esp+0x28]
+  403ba1: mov    DWORD PTR [esp],0x405094
+  403ba8: call   403a48 <_printf>          ; printf("month(1-12):")
+  403bad: lea    eax,[esp+0x2c]
+  403bb1: mov    DWORD PTR [esp],0x405091
+  403bb8: mov    DWORD PTR [esp+0x4],eax
+  403bbc: call   403a28 <_scanf>           ; scanf("%d",&month) [esp+0x2c]
+  403bc1: mov    eax,DWORD PTR [esp+0x28]  ; year
+  403bc5: mov    DWORD PTR [esp],0x4050a1
+  403bcc: mov    DWORD PTR [esp+0x8],eax   ; 参数3 = year
+  403bd0: mov    eax,DWORD PTR [esp+0x2c]  ; month
+  403bd4: mov    eax,DWORD PTR [eax*4+0x4051bc] ; names[month-1]
+  403bdb: mov    DWORD PTR [esp+0x4],eax
+  403bdf: call   403a48 <_printf>          ; printf("   %s %d\n",...)
+  403be4: mov    DWORD PTR [esp],0x4050ab
+  403beb: call   403a38 <_puts>            ; puts("Su Mo ...")
+; 内联 day_of_week 开始: ebx=月, ecx=年
+  403bf0: mov    ebx,DWORD PTR [esp+0x2c]  ; ebx = month
+  403bf4: mov    ecx,DWORD PTR [esp+0x28]  ; ecx = year
+  403bf8: cmp    ebx,0x2
+  403bfb: jg     403d25                    ; m>2 跳过减1
+  403c01: lea    esi,[ecx-0x1]             ; 1/2 月: y-1
+  403c04: mov    edi,0x4
+  403c09: mov    eax,esi
+  403c0b: cdq
+  403c0c: idiv   edi                       ; (y-1)/4
+  403c0e: mov    edi,0xffffff9c            ; -100
+  403c13: add    eax,esi                   ; + y
+  403c15: mov    DWORD PTR [esp+0x1c],eax  ; 暂存 y+y/4
+  403c19: mov    eax,esi
+  403c1b: cdq
+  403c1c: idiv   edi                       ; /100 (idiv -100)
+  403c1e: add    eax,DWORD PTR [esp+0x1c]  ; - y/100
+  403c22: mov    edi,eax
+  403c24: mov    eax,esi
+  403c26: mov    esi,0x190                 ; 400
+  403c2b: cdq
+  403c2c: idiv   esi                       ; /400
+  403c2e: mov    esi,0x7
+  403c33: add    eax,edi                   ; + y/400
+  403c35: lea    edi,[ebx-0x1]             ; month-1
+  403c38: add    eax,DWORD PTR [edi*4+0x405120] ; + t[month-1]
+  403c3f: mov    edi,DWORD PTR [edi*4+0x4050e0] ; edi = md[month-1] 天数
+  403c46: add    eax,0x1                   ; +1
+  403c49: cdq
+  403c4a: idiv   esi                       ; mod 7 -> edx=w
+  403c4c: cmp    ebx,0x2                   ; 2月?
+  403c4f: mov    DWORD PTR [esp+0x1c],edx  ; 存 w
+  403c53: mov    esi,edx                   ; esi = w
+  403c55: jne    403d68                    ; 非2月直接下去
+; 闰年判断(内联): %400==0 或 (%4==0 且 %100!=0)
+  403c5b: mov    eax,ecx                   ; year
+  403c5d: mov    ebx,0x190                 ; 400
+  403c62: cdq
+  403c63: idiv   ebx
+  403c65: test   edx,edx
+  403c67: je     403c84                    ; 整除400 -> 闰年
+  403c69: test   cl,0x3
+  403c6c: jne    403d68                    ; 不整除4 -> 平年
+  403c72: mov    eax,ecx
+  403c74: mov    ebx,0x64                  ; 100
+  403c79: cdq
+  403c7a: idiv   ebx
+  403c7c: test   edx,edx
+  403c7e: je     403d68                    ; 整除100 -> 平年
+  403c84: imul   eax,DWORD PTR [esp+0x1c],0x3 ; w*3
+  403c89: mov    edi,0x1d                  ; edi = 29(闰年2月)
+  403c8e: test   eax,eax
+  403c90: mov    DWORD PTR [esp+0x1c],eax  ; 存 w*3
+  403c94: jle    403cbb                    ; w*3<=0 不打前导空格
+; 前导空格循环
+  403ca0: xor    ebx,ebx
+  403ca2: mov    DWORD PTR [esp],0x20
+  403ca9: add    ebx,0x1
+  403cac: call   403a40 <_putchar>         ; putchar(' ')
+  403cb1: cmp    ebx,DWORD PTR [esp+0x1c]
+  403cb5: jl     403ca2
+  403cb7: test   edi,edi
+  403cb9: jle    403d0f
+; 主循环: ebx=day 1..d
+  403cbb: mov    ebx,0x1                  ; day=1
+  403cc0: jmp    403cc9
+  403cc2: add    ebx,0x1                  ; day++
+  403cc5: cmp    ebx,edi
+  403cc7: jg     403d0f                   ; day>d 结束
+  403cc9: mov    DWORD PTR [esp+0x4],ebx
+  403ccd: mov    DWORD PTR [esp],0x4050c0 ; "%3d"
+  403cd4: call   403a48 <_printf>         ; printf("%3d", day)
+; (w+day)%7==0: 乘魔数 0x92492493 反推余数
+  403cd9: lea    ecx,[esi+ebx*1]          ; w+day
+  403cdc: mov    eax,0x92492493
+  403ce1: imul   ecx
+  403ce3: mov    eax,ecx
+  403ce5: sar    eax,0x1f
+  403ce8: add    edx,ecx
+  403cea: sar    edx,0x2
+  403ced: sub    edx,eax                  ; 商
+  403cef: lea    eax,[edx*8+0x0]
+  403cf6: sub    eax,edx                  ; 商*7
+  403cf8: cmp    ecx,eax                  ; 余数==0 ?
+  403cfa: jne    403cc2
+  403cfc: mov    DWORD PTR [esp],0xa
+  403d03: add    ebx,0x1
+  403d06: call   403a40 <_putchar>        ; putchar('\n')
+  403d0b: cmp    ebx,edi
+  403d0d: jle    403cc9
+; 收尾换行 + 返回 0 (0x403D0F 之后)
+  403d0f: ...
+; (末尾同 -O0: putchar('\n'); xor eax,eax; 恢复寄存器; ret)
+
+; 总结:
+; -O0 完全按源码翻: 参数在栈上, 函数分开, 变量在栈槽;
+; -O2 把两个函数内联, 变量放寄存器(ebx=月/esi=星期/edi=天数),
+; 乘除法用 idiv 或 乘魔数+移位(mod 7 -> imul 0x92492493),
+; 闰年判断也排成无分支的顺序。两版输出完全一样。
